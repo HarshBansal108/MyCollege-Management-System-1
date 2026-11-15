@@ -222,6 +222,49 @@ class attendenceSys {
 };
 
 
+
+class announcement{
+    private:
+    int id;
+    string title;
+    string ann;
+    string date;
+
+    public:
+    announcement(){
+        id=0;
+        title="";
+        ann="";
+        date="";
+    }
+
+    void getannouncement(){
+        cout<<"Enter Announcement Id : ";
+        cin>>id;
+        cout<<endl;
+        cout<<"Enter Title : ";
+        getline(cin>>ws, title);
+        cout<<endl;
+        cout<<"Enter Announcement : ";
+        getline(cin, ann);
+        cout<<endl;
+        cout<<"Enter date : ";
+        getline(cin, date);
+        cout<<endl;
+    }
+
+    void display(){
+        cout<<"ID : "<<id<<endl;
+        cout<<"Date : "<<date<<endl;
+        cout<<"Title : "<<title<<endl;
+        cout<<"Announcement : "<<ann<<endl;
+    }
+
+    int get_id(){
+        return id;
+    }
+};
+
 class Faculty {
     private:
     string name;
@@ -467,8 +510,84 @@ class Faculty {
         cout<<"Id not founded"<<endl;
     }
 
+
+    void createAnnouncement(announcement announcements[], int &ann_Count){
+        if(ann_Count == 100){
+            cout<<"Announcement list is full"<<endl;
+            return;
+        }
+
+        announcements[ann_Count].getannouncement();
+        ann_Count++;
+        cout<<"Announcement created successfully"<<endl;
+    }
+
+    void viewAnnouncement(announcement announcements[], int ann_Count){
+        if(ann_Count == 0){
+            cout<<"No announcements available"<<endl;
+            return;
+        }
+
+        cout<<"ALL ANNOUNCEMENTS"<<endl;
+        for(int i=0; i<ann_Count; i++){
+            cout<<"Announcement "<<i+1<<endl;
+            announcements[i].display();
+            cout<<endl;
+        }
+    }
+
+    void viewAnnouncements(announcement announcements[], int ann_Count){
+        viewAnnouncement(announcements, ann_Count);
+    }
+
+    void searchAnnouncement(announcement announcements[], int ann_Count){
+        if(ann_Count == 0){
+            cout<<"No announcements available"<<endl;
+            return;
+        }
+
+        int searchId;
+        cout<<"Enter Announcement ID : ";
+        cin>>searchId;
+
+        for(int i=0; i<ann_Count; i++){
+            if(searchId == announcements[i].get_id()){
+                cout<<"Announcement Found"<<endl;
+                announcements[i].display();
+                return;
+            }
+        }
+
+        cout<<"Announcement ID not found"<<endl;
+    }
+
+    void deleteAnnouncement(announcement announcements[], int &ann_Count){
+        if(ann_Count == 0){
+            cout<<"No announcements available"<<endl;
+            return;
+        }
+
+        int searchId;
+        cout<<"Enter Announcement ID to delete : ";
+        cin>>searchId;
+
+        for(int i=0; i<ann_Count; i++){
+            if(searchId == announcements[i].get_id()){
+                for(int j=i; j<(ann_Count-1); j++){
+                    announcements[j] = announcements[j+1];
+                }
+
+                ann_Count--;
+                cout<<"Announcement deleted successfully"<<endl;
+                return;
+            }
+        }
+
+        cout<<"Announcement ID not found"<<endl;
+    }
+
     void dashboard(Student students[], int &studentCount, Student recentStudents[], int &top, string requests[], int &front, int &rear,
-    attendenceSys &attendence) {
+    attendenceSys &attendence, announcement announcements[], int &ann_Count) {
         int choice;
 
         do {
@@ -486,7 +605,11 @@ class Faculty {
             cout<<"10. Mark attendence"<<endl;
             cout<<"11. View attendence by student ID"<<endl;
             cout<<"12. Attendence summary by date"<<endl;
-            cout<<"13. Log out"<<endl;
+            cout<<"13. Create Announcement"<<endl;
+            cout<<"14. View Announcement"<<endl;
+            cout<<"15. Search Announcement"<<endl;
+            cout<<"16. Delete Announcement"<<endl;
+            cout<<"17. Log out"<<endl;
 
             cout<<"Enter the choice"<<endl;
             cin>>choice;
@@ -541,6 +664,22 @@ class Faculty {
                     break;
 
                 case 13:
+                    createAnnouncement(announcements, ann_Count);
+                    break;
+
+                case 14:
+                    viewAnnouncement(announcements, ann_Count);
+                    break;
+
+                case 15:
+                    searchAnnouncement(announcements, ann_Count);
+                    break;
+
+                case 16:
+                    deleteAnnouncement(announcements, ann_Count);
+                    break;
+
+                case 17:
                     cout<<"Logging out"<<endl;
                     break;
 
@@ -548,13 +687,16 @@ class Faculty {
                     cout<<"Invalid choice"<<endl;
             }
 
-        } while(choice != 13);
+        } while(choice != 17);
     }
 };
 
 int runFacultyPortalFor(const string& name, const string& password, const string& facultyId, const string& department, const string& email, Student students[], int studentCount) {
     attendenceSys attendence;
     Faculty loggedFaculty(name, password, facultyId, department, email);
+
+    announcement announcements[100];
+    int ann_count = 0;
 
     Student recentStudents[100];
     int top = -1;
@@ -563,7 +705,7 @@ int runFacultyPortalFor(const string& name, const string& password, const string
     int rear = -1;
 
     cout << "\nWelcome to Faculty Portal, " << name << "!\n";
-    loggedFaculty.dashboard(students, studentCount, recentStudents, top, requests, front, rear, attendence);
+    loggedFaculty.dashboard(students, studentCount, recentStudents, top, requests, front, rear, attendence, announcements, ann_count);
     return 0;
 }
 
