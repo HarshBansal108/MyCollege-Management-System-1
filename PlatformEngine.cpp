@@ -1,718 +1,612 @@
+// MyCollege portal - student/faculty console app
+// Faculty tools (attendance, announcements, performance) live in faculty_module,
+// the login/profile/feed/connections part lives in kaushal_module.
+
 #include <iostream>
 #include <string>
 #include <vector>
 #include <map>
 #include <algorithm>
 #include <cctype>
-#include <cstdlib>
 #include <limits>
 using namespace std;
 
 namespace faculty_module {
-class Student {
-    private:
-    string studentId;
-    string name;
-    string course;
-    string email;
-    string mobile;
+
+const int MAX_RECORDS = 100;
+
+// reads an int safely, so typing a letter doesn't send the menu into an endless loop
+int readInt(const string &prompt)
+{
+    int value;
+    while (true)
+    {
+        cout << prompt;
+        if (cin >> value)
+            return value;
+        cout << "Please enter a number.\n";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+}
+
+class StudentRecord
+{
+    string studentId, name, course, email, mobile, section;
     int performance;
-    string section;
 
-    public:
+public:
+    StudentRecord() : performance(0) {}
 
-    Student() {
-        studentId = "";
-        name = "";
-        course = "";
-        email = "";
-        mobile = "";
-        performance = 0;
-        section = "";
-    }
+    StudentRecord(string id, string name, string course, string email,
+                  string mobile, int performance, string section)
+        : studentId(id), name(name), course(course), email(email),
+          mobile(mobile), section(section), performance(performance) {}
 
-    Student(string id, string name, string course, string email, string mobile, int performance, string section) {
+    string getId() const { return studentId; }
+    string getName() const { return name; }
+    string getSection() const { return section; }
+    int getPerformance() const { return performance; }
+    void setPerformance(int p) { performance = p; }
 
-        this->studentId = id;
-        this->name = name;
-        this->course = course;
-        this->email = email;
-        this->mobile = mobile;
-        this->performance = performance;
-        this->section = section;
-
-    }
-
-    string getStudentId() {
-        return studentId;
-    }
-
-    int getPerformance() {
-        return performance;
-    }
-
-    void setPer(int p) {
-        performance = p;
-    }
-
-    string getName() {
-        return name;
-    }
-
-    string getSec() {
-        return section;
-    }
-
-    void display() {
-        cout<<"Student ID: "<<studentId<<endl;
-        cout<<"Name: "<<name<<endl;
-        cout<<"Course: "<<course<<endl;
-        cout<<"Email: "<<email<<endl;
-        cout<<"Mobile: "<<mobile<<endl;
-        cout<<"Performance: "<<performance<<endl;
-        cout<<"Section : "<<section<<endl;
-    }
-
-    void displayPerformance() {
-        cout<<"Student ID: "<<studentId<<endl;
-        cout<<"Name: "<<name<<endl;
-        cout<<"Performance: "<<performance<<endl;
-        cout<<"Section : "<<section<<endl;
-    }
-};
-
-struct attendence{
-    string stId;
-    string date;
-    char status;
-};
-
-class attendenceSys {
-    private:
-    vector<attendence> stdrecords;
-    public:
-    void markAtten(Student students[], int studentCount) {
-
-        string section;
-        cout<<"Enter the section like CSE-A or CSE-B"<<endl;
-        cin>>section;
-
-        string date;
-        cout<<"Enter date in format(DD-MM-YY) : "<<endl;
-        cin>>date;
-
-        bool flag = false;
-
-        for(int i=0; i<studentCount; i++) {
-
-            if(students[i].getSec() != section) {
-                continue;
-            }
-            flag = true;
-
-            char ask;
-            cout<<"Student Id : "<<students[i].getStudentId()<<endl;
-            cout<<"Student name : "<<students[i].getName()<<endl;
-            cout<<"Section : "<<students[i].getSec()<<endl;
-
-            cout<<"Enter P(present) or A(absent) : "<<endl;
-            cin>>ask;
-
-            if(ask == 'P' || ask == 'p') {
-                ask = 'P';
-            } else if(ask == 'A' || ask == 'a') {
-                ask = 'A';
-            } else {
-                cout<<"You typed wrongly"<<endl;
-                i--;
-                continue;
-            }
-
-            attendence newRec;
-            newRec.stId = students[i].getStudentId();
-            newRec.date = date;
-            newRec.status = ask;
-            stdrecords.push_back(newRec);
-        }
-
-            if(!flag) {
-                cout<<"No student found in this section"<<endl;
-            } else {
-                cout<<"Attendece marked"<<endl;
-            }
-    }
-
-    void seeAttendence()
+    void display() const
     {
-        string idAttendence;
-        cout<<"Enter the id for which to see attendence : "<<endl;
-        cin>>idAttendence;
+        cout << "Student ID: " << studentId << endl;
+        cout << "Name: " << name << endl;
+        cout << "Course: " << course << endl;
+        cout << "Email: " << email << endl;
+        cout << "Mobile: " << mobile << endl;
+        cout << "Performance: " << performance << endl;
+        cout << "Section: " << section << endl;
+    }
 
-        bool f = false;
-        int total = 0;
-        int present = 0;
-        int absent = 0;
+    void displayPerformance() const
+    {
+        cout << "Student ID: " << studentId << endl;
+        cout << "Name: " << name << endl;
+        cout << "Performance: " << performance << endl;
+        cout << "Section: " << section << endl;
+    }
+};
 
-        for(attendence rec : stdrecords)
+struct AttendanceEntry
+{
+    string studentId;
+    string date;
+    char status; // 'P' or 'A'
+};
+
+class AttendanceSystem
+{
+    vector<AttendanceEntry> entries;
+
+public:
+    void markAttendance(StudentRecord students[], int count)
+    {
+        string section, date;
+        cout << "Enter the section (e.g. CSE-A): ";
+        cin >> section;
+        cout << "Enter date (DD-MM-YY): ";
+        cin >> date;
+
+        bool anyFound = false;
+
+        for (int i = 0; i < count; i++)
         {
+            if (students[i].getSection() != section)
+                continue;
+            anyFound = true;
 
-            if(rec.stId == idAttendence)
+            cout << "\nStudent ID: " << students[i].getId() << endl;
+            cout << "Name: " << students[i].getName() << endl;
+
+            char answer;
+            while (true)
             {
-                total++;
-                cout<<"Date : "<<rec.date<<endl;
-                cout<<"Status : "<<rec.status<<endl;
-                if(rec.status == 'P') {
-                    present++;
-                } else if(rec.status == 'A') {
-                    absent++;
-                }
-
-                f = true;
+                cout << "Present (P) or Absent (A)? ";
+                cin >> answer;
+                answer = toupper(static_cast<unsigned char>(answer));
+                if (answer == 'P' || answer == 'A')
+                    break;
+                cout << "Invalid input, try again.\n";
             }
+
+            AttendanceEntry entry;
+            entry.studentId = students[i].getId();
+            entry.date = date;
+            entry.status = answer;
+            entries.push_back(entry);
         }
 
-        if(f == false)
-        {
-            cout<<"Attendence record not found"<<endl;
-        } else {
-            cout<<"Total classes : "<<total<<endl;
-            cout<<"Total present : "<<present<<endl;
-            cout<<"Total absent : "<<absent<<endl;
-            double percentage = (present * 100.0)/total;
-            cout<<"Percentage : "<<percentage<<endl;
-        }
+        if (anyFound)
+            cout << "Attendance marked." << endl;
+        else
+            cout << "No students found in this section." << endl;
     }
 
-    void seeAttendByDate()
+    void showStudentAttendance()
     {
-        string dateToSearch;
-        cout<<"Enter the date : "<<endl;
-        cin>>dateToSearch;
+        string id;
+        cout << "Enter student ID: ";
+        cin >> id;
 
-        int total = 0;
-        int pres = 0;
-        int absen = 0;
+        int total = 0, present = 0, absent = 0;
 
-        for(attendence rec : stdrecords)
+        for (size_t i = 0; i < entries.size(); i++)
         {
-            if(rec.date == dateToSearch) {
-                total++;
-
-                if(rec.status == 'P')
-                {
-                    pres++;
-                } else if(rec.status == 'A')
-                {
-                    absen++;
-                }
-            }
+            if (entries[i].studentId != id)
+                continue;
+            total++;
+            cout << "Date: " << entries[i].date << "  Status: " << entries[i].status << endl;
+            if (entries[i].status == 'P')
+                present++;
+            else
+                absent++;
         }
 
-        if(total == 0) {
-            cout<<"Invalid date or record of that date not found"<<endl;
-        } else {
-            cout<<"Date : "<<dateToSearch<<endl;
-            cout<<"Total students : "<<total<<endl;
-            cout<<"Total present : "<<pres<<endl;
-            cout<<"Total absent : "<<absen<<endl;
-            double percentage = (pres * 100.0) / total;
-            cout<<"Percentage : "<<percentage<<endl;
+        if (total == 0)
+        {
+            cout << "No attendance record found." << endl;
+            return;
         }
+
+        cout << "Total classes: " << total << endl;
+        cout << "Present: " << present << endl;
+        cout << "Absent: " << absent << endl;
+        cout << "Attendance: " << (present * 100.0) / total << "%" << endl;
+    }
+
+    void showDateSummary()
+    {
+        string date;
+        cout << "Enter date: ";
+        cin >> date;
+
+        int total = 0, present = 0, absent = 0;
+
+        for (size_t i = 0; i < entries.size(); i++)
+        {
+            if (entries[i].date != date)
+                continue;
+            total++;
+            if (entries[i].status == 'P')
+                present++;
+            else
+                absent++;
+        }
+
+        if (total == 0)
+        {
+            cout << "No records found for that date." << endl;
+            return;
+        }
+
+        cout << "Date: " << date << endl;
+        cout << "Total students: " << total << endl;
+        cout << "Present: " << present << endl;
+        cout << "Absent: " << absent << endl;
+        cout << "Attendance: " << (present * 100.0) / total << "%" << endl;
     }
 };
 
-
-
-class announcement{
-    private:
+class Announcement
+{
     int id;
-    string title;
-    string ann;
-    string date;
+    string title, text, date;
 
-    public:
-    announcement(){
-        id=0;
-        title="";
-        ann="";
-        date="";
-    }
+public:
+    Announcement() : id(0) {}
 
-    void getannouncement(){
-        cout<<"Enter Announcement Id : ";
-        cin>>id;
-        cout<<endl;
-        cout<<"Enter Title : ";
-        getline(cin>>ws, title);
-        cout<<endl;
-        cout<<"Enter Announcement : ";
-        getline(cin, ann);
-        cout<<endl;
-        cout<<"Enter date : ";
+    void readFromUser()
+    {
+        id = readInt("Announcement ID: ");
+        cout << "Title: ";
+        getline(cin >> ws, title);
+        cout << "Announcement: ";
+        getline(cin, text);
+        cout << "Date: ";
         getline(cin, date);
-        cout<<endl;
     }
 
-    void display(){
-        cout<<"ID : "<<id<<endl;
-        cout<<"Date : "<<date<<endl;
-        cout<<"Title : "<<title<<endl;
-        cout<<"Announcement : "<<ann<<endl;
+    void display() const
+    {
+        cout << "ID: " << id << endl;
+        cout << "Date: " << date << endl;
+        cout << "Title: " << title << endl;
+        cout << "Announcement: " << text << endl;
     }
 
-    int get_id(){
-        return id;
-    }
+    int getId() const { return id; }
 };
 
-class Faculty {
-    private:
-    string name;
-    string password;
-    string facultyId;
-    string department;
-    string email;
+class Faculty
+{
+    string name, password, facultyId, department, email;
 
-    public:
+public:
+    Faculty(string name, string password, string facultyId, string department, string email)
+        : name(name), password(password), facultyId(facultyId),
+          department(department), email(email) {}
 
-    Faculty(string name, string password, string facultyId, string department, string email) {
-        this->name = name;
-        this->password = password;
-        this->facultyId = facultyId;
-        this->department = department;
-        this->email = email;
+    bool login(const string &id, const string &pass) const
+    {
+        return id == facultyId && pass == password;
     }
 
+    // returns the index of a student, or -1 if there is no match
+    int findStudent(StudentRecord students[], int count, const string &id) const
+    {
+        for (int i = 0; i < count; i++)
+            if (students[i].getId() == id)
+                return i;
+        return -1;
+    }
 
-    bool login(string id, string pass) {
-        if(id == facultyId && pass == password) {
-            return true;
+    void searchStudent(StudentRecord students[], int count)
+    {
+        string id;
+        cout << "Enter student ID: ";
+        cin >> id;
+
+        int pos = findStudent(students, count, id);
+        if (pos == -1)
+        {
+            cout << "ID not found." << endl;
+            return;
         }
-
-        return false;
+        cout << "Student found." << endl;
+        students[pos].display();
     }
 
-
-    void searchStudent(Student students[], int studentCount) {
-        string searchId;
-
-        cout<<"Enter the student ID"<<endl;
-        cin>>searchId;
-
-        for(int i=0; i<studentCount; i++) {
-            if(searchId == students[i].getStudentId()) {
-                cout<<"Student found"<<endl;
-                students[i].display();
-                return;
-            }
-        }
-
-        cout<<"Id not found"<<endl;
-    }
-
-    void addStudent(Student students[], int &studentCount) {
-        if(studentCount == 100) {
-            cout<<"Student list is full"<<endl;
+    void addStudent(StudentRecord students[], int &count)
+    {
+        if (count == MAX_RECORDS)
+        {
+            cout << "Student list is full." << endl;
             return;
         }
 
         string id, name, course, email, mobile, section;
-        int performance;
 
-        cout<<"Enter student ID"<<endl;
-        cin>>id;
+        cout << "Enter student ID: ";
+        cin >> id;
 
-        for(int i=0; i<studentCount; i++) {
-            if(id == students[i].getStudentId()) {
-                cout<<"Student ID already exists"<<endl;
-                return;
-            }
+        if (findStudent(students, count, id) != -1)
+        {
+            cout << "That student ID already exists." << endl;
+            return;
         }
 
-        cout<<"Enter student name"<<endl;
-        getline(cin>>ws, name);
-
-        cout<<"Enter student course"<<endl;
+        cout << "Enter name: ";
+        getline(cin >> ws, name);
+        cout << "Enter course: ";
         getline(cin, course);
+        cout << "Enter email: ";
+        cin >> email;
+        cout << "Enter mobile number: ";
+        cin >> mobile;
+        cout << "Enter section: ";
+        cin >> section;
 
-        cout<<"Enter student email"<<endl;
-        cin>>email;
-
-        cout<<"Enter student mobile number"<<endl;
-        cin>>mobile;
-
-        cout<<"Enter student section"<<endl;
-        cin>>section;
-
-        cout<<"Enter student performance"<<endl;
-        cin>>performance;
-
-        if(performance < 0 || performance > 100) {
-            cout<<"Performance entered is invalid"<<endl;
+        int performance = readInt("Enter performance (0-100): ");
+        if (performance < 0 || performance > 100)
+        {
+            cout << "Performance must be between 0 and 100." << endl;
             return;
         }
 
-        students[studentCount] = Student(id, name, course, email, mobile, performance, section);
-
-        studentCount++;
-
-        cout<<"Student added"<<endl;
+        students[count] = StudentRecord(id, name, course, email, mobile, performance, section);
+        count++;
+        cout << "Student added." << endl;
     }
 
+    void viewStudentProfile(StudentRecord students[], int count,
+                            StudentRecord recent[], int &top)
+    {
+        string id;
+        cout << "Enter student ID: ";
+        cin >> id;
 
-    void viewStudentProfile(Student students[], int studentCount, Student recentStudents[], int &top) {
-        string searchId;
+        int pos = findStudent(students, count, id);
+        if (pos == -1)
+        {
+            cout << "ID not found." << endl;
+            return;
+        }
 
-        cout<<"Enter the student ID"<<endl;
-        cin>>searchId;
+        students[pos].display();
 
-        for(int i=0; i<studentCount; i++) {
-            if(searchId == students[i].getStudentId()) {
-                students[i].display();
+        // remember this view (used as a stack, latest on top)
+        if (top < MAX_RECORDS - 1)
+        {
+            top++;
+            recent[top] = students[pos];
+        }
+    }
 
-                if(top < 99) {
-                    top++;
-                    recentStudents[top] = students[i];
-                }
+    void viewStudentPerformance(StudentRecord students[], int count)
+    {
+        string id;
+        cout << "Enter student ID: ";
+        cin >> id;
 
-                return;
+        int pos = findStudent(students, count, id);
+        if (pos == -1)
+        {
+            cout << "ID not found." << endl;
+            return;
+        }
+        students[pos].displayPerformance();
+    }
+
+    // bubble sort, highest performance first
+    void sortStudents(StudentRecord students[], int count)
+    {
+        for (int i = 0; i < count - 1; i++)
+        {
+            for (int j = 0; j < count - i - 1; j++)
+            {
+                if (students[j].getPerformance() < students[j + 1].getPerformance())
+                    swap(students[j], students[j + 1]);
             }
         }
 
-        cout<<"Id not found"<<endl;
-    }
-
-    void viewStudentPerformance(Student students[], int studentCount) {
-        string searchId;
-
-        cout<<"Enter the student ID"<<endl;
-        cin>>searchId;
-
-        for(int i=0; i<studentCount; i++) {
-            if(searchId == students[i].getStudentId()) {
-                students[i].displayPerformance();
-                return;
-            }
-        }
-
-        cout<<"Id not found"<<endl;
-    }
-
-
-    void sortStudents(Student students[], int studentCount) {
-        for(int i=0; i<studentCount-1; i++) {
-            for(int j=0; j<studentCount-i-1; j++) {
-                if(students[j].getPerformance() < students[j+1].getPerformance()) {
-                    Student temp = students[j];
-                    students[j] = students[j+1];
-                    students[j+1] = temp;
-                }
-            }
-        }
-
-        cout<<"Students sorted by performance"<<endl;
-
-        for(int i=0; i<studentCount; i++) {
+        cout << "Students sorted by performance:" << endl;
+        for (int i = 0; i < count; i++)
+        {
             students[i].displayPerformance();
-            cout<<endl;
+            cout << endl;
         }
     }
 
-    void showRecentStudents(Student recentStudents[], int top) {
-        if(top == -1) {
-            cout<<"No student viewed"<<endl;
+    void showRecentStudents(StudentRecord recent[], int top)
+    {
+        if (top == -1)
+        {
+            cout << "No students viewed yet." << endl;
             return;
         }
 
-        cout<<"Recently viewed students"<<endl;
-
-        for(int i=top; i>=0; i--) {
-            recentStudents[i].display();
-            cout<<endl;
+        cout << "Recently viewed students:" << endl;
+        for (int i = top; i >= 0; i--)
+        {
+            recent[i].display();
+            cout << endl;
         }
     }
 
-    void addStudentRequest(string requests[], int &front, int &rear) {
-        if(rear == 99) {
-            cout<<"Request queue is full"<<endl;
+    void addStudentRequest(string requests[], int &front, int &rear)
+    {
+        if (rear == MAX_RECORDS - 1)
+        {
+            cout << "Request queue is full." << endl;
             return;
         }
 
-        string studentId;
+        string id;
+        cout << "Enter student ID: ";
+        cin >> id;
 
-        cout<<"Enter student ID"<<endl;
-        cin>>studentId;
-
-        if(front == -1) {
+        if (front == -1)
             front = 0;
-        }
 
         rear++;
-        requests[rear] = studentId;
-
-        cout<<"Request added"<<endl;
+        requests[rear] = id;
+        cout << "Request added." << endl;
     }
 
-    void processStudentRequest(string requests[], int &front, int &rear) {
-        if(front == -1 || front > rear) {
-            cout<<"No requests available"<<endl;
+    void processStudentRequest(string requests[], int &front, int &rear)
+    {
+        if (front == -1 || front > rear)
+        {
+            cout << "No requests to process." << endl;
             return;
         }
 
-        cout<<"Processing request of student ";
-        cout<<requests[front]<<endl;
-
+        cout << "Processing request of student " << requests[front] << endl;
         front++;
 
-        if(front > rear) {
+        // queue is empty again, reset it
+        if (front > rear)
+        {
             front = -1;
             rear = -1;
         }
     }
 
-
-    void updatePer(Student students[], int studentCount)
+    void updatePerformance(StudentRecord students[], int count)
     {
-        if(studentCount == 0)
+        if (count == 0)
         {
-            cout<<"No students"<<endl;
+            cout << "No students available." << endl;
             return;
         }
 
-        string st_id;
-        cout<<"Enter student id to update performance"<<endl;
-        cin>>st_id;
+        string id;
+        cout << "Enter student ID: ";
+        cin >> id;
 
-        for(int i=0; i<studentCount; i++)
+        int pos = findStudent(students, count, id);
+        if (pos == -1)
         {
-            if(st_id == students[i].getStudentId())
+            cout << "ID not found." << endl;
+            return;
+        }
+
+        cout << "Current record:" << endl;
+        students[pos].displayPerformance();
+
+        int newValue = readInt("Enter new performance (0-100): ");
+        if (newValue < 0 || newValue > 100)
+        {
+            cout << "Invalid performance value." << endl;
+            return;
+        }
+
+        students[pos].setPerformance(newValue);
+        cout << "Performance updated." << endl;
+    }
+
+    void createAnnouncement(Announcement list[], int &count)
+    {
+        if (count == MAX_RECORDS)
+        {
+            cout << "Announcement list is full." << endl;
+            return;
+        }
+
+        list[count].readFromUser();
+        count++;
+        cout << "Announcement created." << endl;
+    }
+
+    void viewAnnouncements(Announcement list[], int count)
+    {
+        if (count == 0)
+        {
+            cout << "No announcements yet." << endl;
+            return;
+        }
+
+        cout << "ALL ANNOUNCEMENTS" << endl;
+        for (int i = 0; i < count; i++)
+        {
+            cout << "\nAnnouncement " << i + 1 << endl;
+            list[i].display();
+        }
+    }
+
+    void searchAnnouncement(Announcement list[], int count)
+    {
+        if (count == 0)
+        {
+            cout << "No announcements yet." << endl;
+            return;
+        }
+
+        int id = readInt("Announcement ID: ");
+
+        for (int i = 0; i < count; i++)
+        {
+            if (list[i].getId() == id)
             {
-                int newPer;
-
-                cout<<"Current record of the student"<<endl;
-                students[i].displayPerformance();
-
-                cout<<"Enter the new performace(0-100)"<<endl;
-                cin>>newPer;
-
-                if(newPer < 0 || newPer > 100)
-                {
-                    cout<<"Invalid performance"<<endl;
-                    return;
-                }
-
-                students[i].setPer(newPer);
-                cout<<"stud per updated"<<endl;
+                cout << "Announcement found." << endl;
+                list[i].display();
                 return;
             }
         }
-
-        cout<<"Id not founded"<<endl;
+        cout << "Announcement ID not found." << endl;
     }
 
-
-    void createAnnouncement(announcement announcements[], int &ann_Count){
-        if(ann_Count == 100){
-            cout<<"Announcement list is full"<<endl;
+    void deleteAnnouncement(Announcement list[], int &count)
+    {
+        if (count == 0)
+        {
+            cout << "No announcements yet." << endl;
             return;
         }
 
-        announcements[ann_Count].getannouncement();
-        ann_Count++;
-        cout<<"Announcement created successfully"<<endl;
-    }
+        int id = readInt("Announcement ID to delete: ");
 
-    void viewAnnouncement(announcement announcements[], int ann_Count){
-        if(ann_Count == 0){
-            cout<<"No announcements available"<<endl;
-            return;
-        }
-
-        cout<<"ALL ANNOUNCEMENTS"<<endl;
-        for(int i=0; i<ann_Count; i++){
-            cout<<"Announcement "<<i+1<<endl;
-            announcements[i].display();
-            cout<<endl;
-        }
-    }
-
-    void viewAnnouncements(announcement announcements[], int ann_Count){
-        viewAnnouncement(announcements, ann_Count);
-    }
-
-    void searchAnnouncement(announcement announcements[], int ann_Count){
-        if(ann_Count == 0){
-            cout<<"No announcements available"<<endl;
-            return;
-        }
-
-        int searchId;
-        cout<<"Enter Announcement ID : ";
-        cin>>searchId;
-
-        for(int i=0; i<ann_Count; i++){
-            if(searchId == announcements[i].get_id()){
-                cout<<"Announcement Found"<<endl;
-                announcements[i].display();
+        for (int i = 0; i < count; i++)
+        {
+            if (list[i].getId() == id)
+            {
+                // shift everything after it one step to the left
+                for (int j = i; j < count - 1; j++)
+                    list[j] = list[j + 1];
+                count--;
+                cout << "Announcement deleted." << endl;
                 return;
             }
         }
-
-        cout<<"Announcement ID not found"<<endl;
+        cout << "Announcement ID not found." << endl;
     }
 
-    void deleteAnnouncement(announcement announcements[], int &ann_Count){
-        if(ann_Count == 0){
-            cout<<"No announcements available"<<endl;
-            return;
-        }
-
-        int searchId;
-        cout<<"Enter Announcement ID to delete : ";
-        cin>>searchId;
-
-        for(int i=0; i<ann_Count; i++){
-            if(searchId == announcements[i].get_id()){
-                for(int j=i; j<(ann_Count-1); j++){
-                    announcements[j] = announcements[j+1];
-                }
-
-                ann_Count--;
-                cout<<"Announcement deleted successfully"<<endl;
-                return;
-            }
-        }
-
-        cout<<"Announcement ID not found"<<endl;
-    }
-
-    void dashboard(Student students[], int &studentCount, Student recentStudents[], int &top, string requests[], int &front, int &rear,
-    attendenceSys &attendence, announcement announcements[], int &ann_Count) {
+    void dashboard(StudentRecord students[], int &studentCount,
+                   StudentRecord recent[], int &top,
+                   string requests[], int &front, int &rear,
+                   AttendanceSystem &attendance,
+                   Announcement announcements[], int &announcementCount)
+    {
         int choice;
 
-        do {
-            cout<<endl;
-            cout<<"FACULTY PORTAL"<<endl;
-            cout<<"1. Search Student"<<endl;
-            cout<<"2. Add Student"<<endl;
-            cout<<"3. View Student Profile"<<endl;
-            cout<<"4. View Student Performance"<<endl;
-            cout<<"5. Sort Students by Performance"<<endl;
-            cout<<"6. Recently Viewed Students"<<endl;
-            cout<<"7. Add Student Request"<<endl;
-            cout<<"8. Process Student Request"<<endl;
-            cout<<"9. Update student performance"<<endl;
-            cout<<"10. Mark attendence"<<endl;
-            cout<<"11. View attendence by student ID"<<endl;
-            cout<<"12. Attendence summary by date"<<endl;
-            cout<<"13. Create Announcement"<<endl;
-            cout<<"14. View Announcement"<<endl;
-            cout<<"15. Search Announcement"<<endl;
-            cout<<"16. Delete Announcement"<<endl;
-            cout<<"17. Log out"<<endl;
+        do
+        {
+            cout << endl;
+            cout << "FACULTY PORTAL" << endl;
+            cout << "1. Search Student" << endl;
+            cout << "2. Add Student" << endl;
+            cout << "3. View Student Profile" << endl;
+            cout << "4. View Student Performance" << endl;
+            cout << "5. Sort Students by Performance" << endl;
+            cout << "6. Recently Viewed Students" << endl;
+            cout << "7. Add Student Request" << endl;
+            cout << "8. Process Student Request" << endl;
+            cout << "9. Update Student Performance" << endl;
+            cout << "10. Mark Attendance" << endl;
+            cout << "11. View Attendance by Student ID" << endl;
+            cout << "12. Attendance Summary by Date" << endl;
+            cout << "13. Create Announcement" << endl;
+            cout << "14. View Announcements" << endl;
+            cout << "15. Search Announcement" << endl;
+            cout << "16. Delete Announcement" << endl;
+            cout << "17. Log out" << endl;
 
-            cout<<"Enter the choice"<<endl;
-            cin>>choice;
+            choice = readInt("Enter your choice: ");
 
-            switch(choice) {
-                case 1:
-                    searchStudent(students, studentCount);
-                    break;
-
-                case 2:
-                    addStudent(students, studentCount);
-                    break;
-
-                case 3:
-                    viewStudentProfile(students, studentCount, recentStudents, top);
-                    break;
-
-                case 4:
-                    viewStudentPerformance(students, studentCount);
-                    break;
-
-                case 5:
-                    sortStudents(students, studentCount);
-                    break;
-
-                case 6:
-                    showRecentStudents(recentStudents, top);
-                    break;
-
-                case 7:
-                    addStudentRequest(requests, front, rear);
-                    break;
-
-                case 8:
-                    processStudentRequest(requests, front, rear);
-                    break;
-
-                case 9:
-                    updatePer(students,studentCount);
-                    break;
-
-                case 10:
-                    attendence.markAtten(students, studentCount);
-                    break;
-
-                case 11:
-                    attendence.seeAttendence();
-                    break;
-
-                case 12:
-                    attendence.seeAttendByDate();
-                    break;
-
-                case 13:
-                    createAnnouncement(announcements, ann_Count);
-                    break;
-
-                case 14:
-                    viewAnnouncement(announcements, ann_Count);
-                    break;
-
-                case 15:
-                    searchAnnouncement(announcements, ann_Count);
-                    break;
-
-                case 16:
-                    deleteAnnouncement(announcements, ann_Count);
-                    break;
-
-                case 17:
-                    cout<<"Logging out"<<endl;
-                    break;
-
-                default:
-                    cout<<"Invalid choice"<<endl;
+            switch (choice)
+            {
+            case 1:  searchStudent(students, studentCount); break;
+            case 2:  addStudent(students, studentCount); break;
+            case 3:  viewStudentProfile(students, studentCount, recent, top); break;
+            case 4:  viewStudentPerformance(students, studentCount); break;
+            case 5:  sortStudents(students, studentCount); break;
+            case 6:  showRecentStudents(recent, top); break;
+            case 7:  addStudentRequest(requests, front, rear); break;
+            case 8:  processStudentRequest(requests, front, rear); break;
+            case 9:  updatePerformance(students, studentCount); break;
+            case 10: attendance.markAttendance(students, studentCount); break;
+            case 11: attendance.showStudentAttendance(); break;
+            case 12: attendance.showDateSummary(); break;
+            case 13: createAnnouncement(announcements, announcementCount); break;
+            case 14: viewAnnouncements(announcements, announcementCount); break;
+            case 15: searchAnnouncement(announcements, announcementCount); break;
+            case 16: deleteAnnouncement(announcements, announcementCount); break;
+            case 17: cout << "Logging out..." << endl; break;
+            default: cout << "Invalid choice." << endl;
             }
 
-        } while(choice != 17);
+        } while (choice != 17);
     }
 };
 
-int runFacultyPortalFor(const string& name, const string& password, const string& facultyId, const string& department, const string& email, Student students[], int studentCount) {
-    attendenceSys attendence;
-    Faculty loggedFaculty(name, password, facultyId, department, email);
+void runFacultyPortalFor(const string &name, const string &password,
+                         const string &facultyId, const string &department,
+                         const string &email, StudentRecord students[], int studentCount)
+{
+    AttendanceSystem attendance;
+    Faculty faculty(name, password, facultyId, department, email);
 
-    announcement announcements[100];
-    int ann_count = 0;
+    Announcement announcements[MAX_RECORDS];
+    int announcementCount = 0;
 
-    Student recentStudents[100];
+    StudentRecord recent[MAX_RECORDS];
     int top = -1;
-    string requests[100];
-    int front = -1;
-    int rear = -1;
 
-    cout << "\nWelcome to Faculty Portal, " << name << "!\n";
-    loggedFaculty.dashboard(students, studentCount, recentStudents, top, requests, front, rear, attendence, announcements, ann_count);
-    return 0;
+    string requests[MAX_RECORDS];
+    int front = -1, rear = -1;
+
+    cout << "\nWelcome to the Faculty Portal, " << name << "!\n";
+    faculty.dashboard(students, studentCount, recent, top, requests, front, rear,
+                      attendance, announcements, announcementCount);
 }
 
-}
+} // namespace faculty_module
 
 
 namespace kaushal_module {
+
 struct User
 {
     int id, collegeId;
@@ -726,27 +620,34 @@ struct Student
     float cgpa;
     vector<string> skills, achievements;
 
+    static void printList(const vector<string> &items)
+    {
+        if (items.empty())
+        {
+            cout << "Not added";
+            return;
+        }
+        for (size_t i = 0; i < items.size(); ++i)
+            cout << (i ? ", " : "") << items[i];
+    }
+
     void display() const
     {
         cout << "\n========================================\n";
         cout << "             STUDENT PROFILE\n";
         cout << "========================================\n";
         cout << "ID: " << id << "\nName: " << name << "\nBio: " << bio
-             << "\nBranch: " << branch << "\nPassing Year: " << passingYear << "\nSkills: ";
-        if (skills.empty())
-            cout << "Not added";
-        for (size_t i = 0; i < skills.size(); ++i)
-            cout << (i ? ", " : "") << skills[i];
+             << "\nBranch: " << branch << "\nPassing Year: " << passingYear;
+        cout << "\nSkills: ";
+        printList(skills);
         cout << "\nAchievements: ";
-        if (achievements.empty())
-            cout << "Not added";
-        for (size_t i = 0; i < achievements.size(); ++i)
-            cout << (i ? ", " : "") << achievements[i];
+        printList(achievements);
         cout << "\nCGPA: " << cgpa << "\nContact: " << contact << "\n";
         cout << "========================================\n";
     }
 };
 
+// small helpers for validated console input
 class Input
 {
 public:
@@ -800,8 +701,7 @@ public:
     static string lower(string value)
     {
         transform(value.begin(), value.end(), value.begin(),
-                  [](unsigned char c)
-                  { return static_cast<char>(tolower(c)); });
+                  [](unsigned char c) { return static_cast<char>(tolower(c)); });
         return value;
     }
 };
@@ -810,12 +710,35 @@ class StudentPortal
 {
     vector<Student> students;
 
+    void readSkills(Student &s)
+    {
+        s.skills.clear();
+        int n = Input::number("Number of skills (0-5): ", 0, 5);
+        for (int i = 0; i < n; ++i)
+            s.skills.push_back(Input::text("Skill " + to_string(i + 1) + ": "));
+    }
+
+    void readAchievements(Student &s)
+    {
+        s.achievements.clear();
+        int n = Input::number("Number of achievements (0-10): ", 0, 10);
+        for (int i = 0; i < n; ++i)
+            s.achievements.push_back(Input::text("Achievement " + to_string(i + 1) + ": "));
+    }
+
 public:
     StudentPortal()
     {
-        students.push_back({1, 2027, "Aarav Sharma", "CSE student interested in problem solving.", "CSE", "aarav@example.com", 8.4f, {"C++", "DSA", "HTML"}, {"Hackathon participant"}});
-        students.push_back({2, 2027, "Priya Verma", "Learning software development and databases.", "CSE", "priya@example.com", 8.8f, {"Java", "SQL", "Python"}, {"Coding contest finalist"}});
-        students.push_back({3, 2026, "Rohan Mehta", "Interested in cloud and networking.", "ECE", "rohan@example.com", 8.1f, {"C", "Networking"}, {}});
+        // sample data so the portal isn't empty on first run
+        students.push_back({1, 2027, "Aarav Sharma", "CSE student interested in problem solving.",
+                            "CSE", "aarav@example.com", 8.4f,
+                            {"C++", "DSA", "HTML"}, {"Hackathon participant"}});
+        students.push_back({2, 2027, "Priya Verma", "Learning software development and databases.",
+                            "CSE", "priya@example.com", 8.8f,
+                            {"Java", "SQL", "Python"}, {"Coding contest finalist"}});
+        students.push_back({3, 2026, "Rohan Mehta", "Interested in cloud and networking.",
+                            "ECE", "rohan@example.com", 8.1f,
+                            {"C", "Networking"}, {}});
     }
 
     void registerStudent(int id, const string &name)
@@ -823,20 +746,18 @@ public:
         Student s;
         s.id = id;
         s.name = name;
-        cout << "\nComplete your student profile\n";
+
+        cout << "\nLet's complete your student profile.\n";
         s.bio = Input::text("Short bio: ");
         s.branch = Input::text("Branch: ");
         s.passingYear = Input::number("Passing year: ", 2000, 2100);
-        int n = Input::number("Number of skills (0-5): ", 0, 5);
-        for (int i = 0; i < n; ++i)
-            s.skills.push_back(Input::text("Skill " + to_string(i + 1) + ": "));
+        readSkills(s);
         s.cgpa = Input::decimal("CGPA (0-10): ", 0, 10);
         s.contact = Input::text("Contact details: ");
-        n = Input::number("Number of achievements (0-10): ", 0, 10);
-        for (int i = 0; i < n; ++i)
-            s.achievements.push_back(Input::text("Achievement " + to_string(i + 1) + ": "));
+        readAchievements(s);
+
         students.push_back(s);
-        cout << "\nStudent profile created successfully.\n";
+        cout << "\nProfile created successfully.\n";
         s.display();
     }
 
@@ -867,6 +788,14 @@ public:
             cout << "\nNo matching student found.\n";
     }
 
+    Student *find(int id)
+    {
+        for (size_t i = 0; i < students.size(); ++i)
+            if (students[i].id == id)
+                return &students[i];
+        return NULL;
+    }
+
     void update(int id)
     {
         Student *s = find(id);
@@ -875,6 +804,7 @@ public:
             cout << "\nNo student profile is linked to this account yet.\n";
             return;
         }
+
         int choice;
         do
         {
@@ -882,56 +812,22 @@ public:
                  << "1. Name\n2. Bio\n3. Branch\n4. Passing year\n"
                  << "5. Skills\n6. CGPA\n7. Contact\n8. Achievements\n9. Back\n";
             choice = Input::number("Choose: ", 1, 9);
+
             switch (choice)
             {
-            case 1:
-                s->name = Input::text("New name: ");
-                break;
-            case 2:
-                s->bio = Input::text("New bio: ");
-                break;
-            case 3:
-                s->branch = Input::text("New branch: ");
-                break;
-            case 4:
-                s->passingYear = Input::number("New passing year: ", 2000, 2100);
-                break;
-            case 5:
-            {
-                s->skills.clear();
-                int n = Input::number("Number of skills (0-5): ", 0, 5);
-                for (int i = 0; i < n; ++i)
-                    s->skills.push_back(Input::text("Skill " + to_string(i + 1) + ": "));
-                break;
+            case 1: s->name = Input::text("New name: "); break;
+            case 2: s->bio = Input::text("New bio: "); break;
+            case 3: s->branch = Input::text("New branch: "); break;
+            case 4: s->passingYear = Input::number("New passing year: ", 2000, 2100); break;
+            case 5: readSkills(*s); break;
+            case 6: s->cgpa = Input::decimal("New CGPA: ", 0, 10); break;
+            case 7: s->contact = Input::text("New contact: "); break;
+            case 8: readAchievements(*s); break;
             }
-            case 6:
-                s->cgpa = Input::decimal("New CGPA: ", 0, 10);
-                break;
-            case 7:
-                s->contact = Input::text("New contact: ");
-                break;
-            case 8:
-            {
-                s->achievements.clear();
-                int n = Input::number("Number of achievements (0-10): ", 0, 10);
-                for (int i = 0; i < n; ++i)
-                    s->achievements.push_back(Input::text("Achievement " + to_string(i + 1) + ": "));
-                break;
-            }
-            case 9:
-                break;
-            }
+
             if (choice != 9)
                 cout << "\nProfile updated.\n";
         } while (choice != 9);
-    }
-
-    Student *find(int id)
-    {
-        for (size_t i = 0; i < students.size(); ++i)
-            if (students[i].id == id)
-                return &students[i];
-        return NULL;
     }
 };
 
@@ -939,6 +835,7 @@ struct FeedItem
 {
     int id, authorId;
     string author, type, title, content;
+
     void display() const
     {
         cout << "\n----------------------------------------\n"
@@ -966,18 +863,17 @@ public:
                         "What technology are you learning this semester?"});
     }
 
-    void create(const User &user, bool blog)
+    void create(const User &user, bool isBlog)
     {
         FeedItem item;
         item.id = nextId++;
         item.authorId = user.id;
         item.author = user.fullName;
-        item.type = blog ? "BLOG" : "POST";
-        item.title = blog ? Input::text("Blog title: ") : "Community Post";
-        item.content = Input::text(blog ? "Write your blog: " : "Write your post: ");
+        item.type = isBlog ? "BLOG" : "POST";
+        item.title = isBlog ? Input::text("Blog title: ") : "Community Post";
+        item.content = Input::text(isBlog ? "Write your blog: " : "Write your post: ");
         feed.push_back(item);
-        cout << "\n"
-             << item.type << " published successfully.\n";
+        cout << "\n" << item.type << " published successfully.\n";
     }
 
     void view() const
@@ -988,6 +884,7 @@ public:
             return;
         }
         cout << "\n=============== COMMUNITY FEED ===============\n";
+        // newest first
         for (int i = static_cast<int>(feed.size()) - 1; i >= 0; --i)
             feed[i].display();
     }
@@ -998,9 +895,18 @@ class AuthManager
     vector<User> users;
     int nextId;
 
+    bool emailTaken(const string &email) const
+    {
+        for (size_t i = 0; i < users.size(); ++i)
+            if (Input::lower(users[i].email) == Input::lower(email))
+                return true;
+        return false;
+    }
+
 public:
     AuthManager() : nextId(4)
     {
+        // demo accounts (passwords are plain text, fine for a demo only)
         users.push_back({1, 1001, "Aarav Sharma", "student@mycollege.edu",
                          "student123", "student", "CSE"});
         users.push_back({2, 1002, "Priya Verma", "priya@mycollege.edu",
@@ -1014,8 +920,9 @@ public:
     bool registerUser()
     {
         User u;
-        u.id = nextId++;
+        u.id = nextId;
         u.fullName = Input::text("Full name: ");
+
         while (true)
         {
             u.email = Input::text("Email: ");
@@ -1025,39 +932,41 @@ public:
                 cout << "Enter a valid email address.\n";
                 continue;
             }
-            bool exists = false;
-            for (size_t i = 0; i < users.size(); ++i)
-                if (Input::lower(users[i].email) == Input::lower(u.email))
-                    exists = true;
-            if (exists)
+            if (emailTaken(u.email))
+            {
                 cout << "Email already registered. Try another.\n";
-            else
-                break;
+                continue;
+            }
+            break;
         }
+
         do
         {
             u.password = Input::text("Password (minimum 6 characters): ");
             if (u.password.size() < 6)
                 cout << "Password must contain at least 6 characters.\n";
         } while (u.password.size() < 6);
+
         do
         {
             u.role = Input::lower(Input::text("Role (student/faculty): "));
             if (u.role != "student" && u.role != "faculty")
                 cout << "Enter student or faculty.\n";
         } while (u.role != "student" && u.role != "faculty");
+
         u.collegeId = Input::number("College ID: ", 1, 99999999);
         for (size_t i = 0; i < users.size(); ++i)
         {
             if (users[i].collegeId == u.collegeId)
             {
                 cout << "College ID already registered. Registration cancelled.\n";
-                --nextId;
                 return false;
             }
         }
+
         u.department = Input::text("Department: ");
         users.push_back(u);
+        nextId++;
         cout << "\nRegistration successful. Your user ID is " << u.id << ".\n";
         return true;
     }
@@ -1069,6 +978,7 @@ public:
         {
             string email = Input::text("Email: ");
             string password = Input::text("Password: ");
+
             for (size_t i = 0; i < users.size(); ++i)
             {
                 if (Input::lower(users[i].email) == Input::lower(email) &&
@@ -1081,17 +991,17 @@ public:
             }
             cout << "Incorrect email or password. Attempts remaining: " << 3 - attempt << '\n';
         }
-        cout << "Login limit reached.\n";
+        cout << "Too many failed attempts.\n";
         return false;
     }
 };
 
 class ConnectionManager
 {
-    map<int, vector<int>> connected;
-    map<int, vector<int>> pending;
+    map<int, vector<int>> connected; // user id -> list of connected user ids
+    map<int, vector<int>> pending;   // user id -> ids of people who sent them a request
 
-    bool has(const vector<int> &values, int id) const
+    bool contains(const vector<int> &values, int id) const
     {
         return find(values.begin(), values.end(), id) != values.end();
     }
@@ -1101,12 +1011,12 @@ public:
     {
         if (from == to)
             cout << "You cannot connect with yourself.\n";
-        else if (has(connected[from], to))
+        else if (contains(connected[from], to))
             cout << "You are already connected.\n";
-        else if (has(pending[to], from))
+        else if (contains(pending[to], from))
             cout << "Request already sent.\n";
-        else if (has(pending[from], to))
-            cout << "This user has already sent you a request. Check requests.\n";
+        else if (contains(pending[from], to))
+            cout << "This user has already sent you a request. Check your requests.\n";
         else
         {
             pending[to].push_back(from);
@@ -1122,6 +1032,7 @@ public:
             cout << "\nNo pending connection requests.\n";
             return;
         }
+
         size_t i = 0;
         while (i < list.size())
         {
@@ -1130,9 +1041,11 @@ public:
             for (size_t j = 0; j < users.size(); ++j)
                 if (users[j].id == sender)
                     name = users[j].fullName;
+
             cout << "\nRequest from " << name << " (ID " << sender << ")\n";
             cout << "1. Accept\n2. Reject\n3. Skip\n";
             int choice = Input::number("Choose: ", 1, 3);
+
             if (choice == 1)
             {
                 connected[id].push_back(sender);
@@ -1146,7 +1059,9 @@ public:
                 cout << "Request rejected.\n";
             }
             else
+            {
                 ++i;
+            }
         }
     }
 
@@ -1158,6 +1073,7 @@ public:
             cout << "\nYou have no connections yet.\n";
             return;
         }
+
         cout << "\n=============== MY CONNECTIONS ===============\n";
         for (size_t i = 0; i < it->second.size(); ++i)
             for (size_t j = 0; j < users.size(); ++j)
@@ -1180,18 +1096,21 @@ void searchUsers(const User &current, const AuthManager &auth, ConnectionManager
     string key = Input::lower(Input::text("Search user by name: "));
     bool found = false;
     const vector<User> &users = auth.all();
+
     for (size_t i = 0; i < users.size(); ++i)
     {
-        if (Input::lower(users[i].fullName).find(key) != string::npos)
-        {
-            found = true;
-            cout << "\nID: " << users[i].id << "\nName: " << users[i].fullName
-                 << "\nRole: " << users[i].role << "\nDepartment: " << users[i].department << '\n';
-            if (users[i].id != current.id &&
-                Input::number("Send connection request? (1=Yes, 2=No): ", 1, 2) == 1)
-                links.send(current.id, users[i].id);
-        }
+        if (Input::lower(users[i].fullName).find(key) == string::npos)
+            continue;
+
+        found = true;
+        cout << "\nID: " << users[i].id << "\nName: " << users[i].fullName
+             << "\nRole: " << users[i].role << "\nDepartment: " << users[i].department << '\n';
+
+        if (users[i].id != current.id &&
+            Input::number("Send connection request? (1=Yes, 2=No): ", 1, 2) == 1)
+            links.send(current.id, users[i].id);
     }
+
     if (!found)
         cout << "\nNo matching users found.\n";
 }
@@ -1210,43 +1129,54 @@ void studentMenu(const User &u, AuthManager &auth, StudentPortal &portal,
              << "8. View connection requests\n9. View my connections\n"
              << "10. View my account\n11. Logout\n";
         choice = Input::number("Choose an option: ", 1, 11);
+
         switch (choice)
         {
-        case 1:
-            portal.viewAll();
-            break;
-        case 2:
-            portal.search();
-            break;
-        case 3:
-            portal.update(u.id);
-            break;
-        case 4:
-            feed.create(u, false);
-            break;
-        case 5:
-            feed.create(u, true);
-            break;
-        case 6:
-            feed.view();
-            break;
-        case 7:
-            searchUsers(u, auth, links);
-            break;
-        case 8:
-            links.requests(u.id, auth.all());
-            break;
-        case 9:
-            links.view(u.id, auth.all());
-            break;
-        case 10:
-            showAccount(u);
-            break;
-        case 11:
-            cout << "Logged out successfully.\n";
-            break;
+        case 1:  portal.viewAll(); break;
+        case 2:  portal.search(); break;
+        case 3:  portal.update(u.id); break;
+        case 4:  feed.create(u, false); break;
+        case 5:  feed.create(u, true); break;
+        case 6:  feed.view(); break;
+        case 7:  searchUsers(u, auth, links); break;
+        case 8:  links.requests(u.id, auth.all()); break;
+        case 9:  links.view(u.id, auth.all()); break;
+        case 10: showAccount(u); break;
+        case 11: cout << "Logged out successfully.\n"; break;
         }
     } while (choice != 11);
+}
+
+// Builds the student list the faculty module works with, using the
+// accounts and profiles from this module.
+int buildFacultyStudentList(const AuthManager &auth, StudentPortal &portal,
+                            faculty_module::StudentRecord out[], int maxCount)
+{
+    const vector<User> &allUsers = auth.all();
+    int count = 0;
+
+    for (size_t i = 0; i < allUsers.size() && count < maxCount; ++i)
+    {
+        if (allUsers[i].role != "student")
+            continue;
+
+        string mobile = "Not provided";
+        int performance = 0;
+        string section = "CSE-A";
+
+        Student *profile = portal.find(allUsers[i].id);
+        if (profile != NULL)
+        {
+            mobile = profile->contact;
+            performance = static_cast<int>(profile->cgpa * 10 + 0.5f); // CGPA out of 10 -> score out of 100
+            section = profile->branch + "-A";
+        }
+
+        out[count++] = faculty_module::StudentRecord(
+            to_string(allUsers[i].collegeId), allUsers[i].fullName,
+            allUsers[i].department, allUsers[i].email, mobile, performance, section);
+    }
+    return count;
 }
 
 void facultyMenu(const User &u, AuthManager &auth, StudentPortal &portal,
@@ -1263,124 +1193,33 @@ void facultyMenu(const User &u, AuthManager &auth, StudentPortal &portal,
              << "8. View my connections\n9. View my account\n"
              << "10. Attendance + Student Management\n11. Logout\n";
         choice = Input::number("Choose an option: ", 1, 11);
+
         switch (choice)
         {
-        case 1:
-            portal.viewAll();
-            break;
-        case 2:
-            portal.search();
-            break;
-        case 3:
-            feed.create(u, false);
-            break;
-        case 4:
-            feed.create(u, true);
-            break;
-        case 5:
-            feed.view();
-            break;
-        case 6:
-            searchUsers(u, auth, links);
-            break;
-        case 7:
-            links.requests(u.id, auth.all());
-            break;
-        case 8:
-            links.view(u.id, auth.all());
-            break;
-        case 9:
-            showAccount(u);
-            break;
+        case 1:  portal.viewAll(); break;
+        case 2:  portal.search(); break;
+        case 3:  feed.create(u, false); break;
+        case 4:  feed.create(u, true); break;
+        case 5:  feed.view(); break;
+        case 6:  searchUsers(u, auth, links); break;
+        case 7:  links.requests(u.id, auth.all()); break;
+        case 8:  links.view(u.id, auth.all()); break;
+        case 9:  showAccount(u); break;
         case 10:
         {
-            faculty_module::Student sharedStudents[100];
-            int sharedStudentCount = 0;
-            const vector<User> &allUsers = auth.all();
-
-            for (size_t i = 0; i < allUsers.size() && sharedStudentCount < 100; ++i)
-            {
-                if (allUsers[i].role == "student")
-                {
-                    kaushal_module::Student *profile = portal.find(allUsers[i].id);
-                    string mobile = "Not provided";
-                    int performance = 0;
-                    string section = "CSE-A";
-
-                    if (profile != NULL)
-                    {
-                        mobile = profile->contact;
-                        performance = static_cast<int>(profile->cgpa * 10 + 0.5f);
-                        section = profile->branch + "-A";
-                    }
-
-                    sharedStudents[sharedStudentCount] = faculty_module::Student(
-                        to_string(allUsers[i].collegeId), allUsers[i].fullName,
-                        allUsers[i].department, allUsers[i].email, mobile, performance, section);
-                    sharedStudentCount++;
-                }
-            }
-
+            faculty_module::StudentRecord list[faculty_module::MAX_RECORDS];
+            int count = buildFacultyStudentList(auth, portal, list, faculty_module::MAX_RECORDS);
             faculty_module::runFacultyPortalFor(u.fullName, u.password, to_string(u.collegeId),
-                                                u.department, u.email, sharedStudents, sharedStudentCount);
+                                                u.department, u.email, list, count);
             break;
         }
-        case 11:
-            cout << "Logged out successfully.\n";
-            break;
+        case 11: cout << "Logged out successfully.\n"; break;
         }
     } while (choice != 11);
 }
 
-int runKaushalModule()
-{
-    AuthManager auth;
-    StudentPortal portal;
-    FeedManager feed;
-    ConnectionManager links;
+} // namespace kaushal_module
 
-    cout << "\n============================================\n"
-         << "          MYCOLLEGE STUDENT PORTAL\n"
-         << "============================================\n"
-         << "DEMO STUDENT: student@mycollege.edu / student123\n"
-         << "DEMO FACULTY: faculty@mycollege.edu / faculty123\n";
-
-    int choice;
-    do
-    {
-        cout << "\n================ MAIN MENU ================\n"
-             << "1. Register\n2. Login\n3. Exit\n";
-        choice = Input::number("Choose an option: ", 1, 3);
-        if (choice == 1)
-        {
-            if (auth.registerUser())
-            {
-                const User &u = auth.all().back();
-                if (u.role == "student")
-                    portal.registerStudent(u.id, u.fullName);
-                else
-                    cout << "\nFaculty account created. You can now log in.\n";
-            }
-        }
-        else if (choice == 2)
-        {
-            User loggedIn;
-            if (auth.login(loggedIn))
-            {
-                if (loggedIn.role == "student")
-                    studentMenu(loggedIn, auth, portal, feed, links);
-                else
-                    facultyMenu(loggedIn, auth, portal, feed, links);
-            }
-        }
-        else
-        {
-            cout << "\nThank you for using MyCollege Student Portal. Goodbye!\n";
-        }
-    } while (choice != 3);
-    return 0;
-}
-}
 
 int main()
 {
